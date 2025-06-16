@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HypeHive Admin Dashboard</title>
+  <meta charset="UTF-8">
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-functions.js"></script>
+  <script src="../firebase/firebase-config.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h2 {
+      color: #007bff;
+    }
+    .payout {
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>Admin Payout Dashboard</h2>
+  <div id="payouts">Loading payouts...</div>
+
+  <script>
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user || user.email !== "admin@hypehive.app") {
+        document.body.innerHTML = "<h2>Unauthorized Access</h2>";
+        return;
+      }
+
+      const payoutsRef = firebase.firestore().collection("payouts");
+      payoutsRef.where("status", "==", "pending").onSnapshot(snapshot => {
+        const container = document.getElementById("payouts");
+        container.innerHTML = "";
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const div = document.createElement("div");
+          div.className = "payout";
+          div.innerHTML = `
+            <strong>User:</strong> ${data.userId}<br>
+            <strong>Amount:</strong> $${data.amount}<br>
+            <strong>Method:</strong> ${data.method}<br>
+            <button onclick="approvePayout('${doc.id}')">Mark as Paid</button>
+          `;
+          container.appendChild(div);
+        });
+      });
+    });
+
+    function approvePayout(payoutId) {
+      firebase.functions().httpsCallable("adminApprovePayout")({ payoutId })
+        .then(() => alert("Marked as paid."));
+    }
+  </script>
+</body>
+</html>
